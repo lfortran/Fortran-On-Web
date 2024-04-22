@@ -1,0 +1,133 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Fortran On Web: Simple Linear Regression</title>
+</head>
+
+<body>
+    <h2>Simple Linear Regression</h2>
+    <div style="padding: 20px; display: flex; justify-content: center">
+        <canvas id="myCanvas" width="400" height="400" style="border:1px solid #000000;">
+        </canvas>
+    </div>
+    <div style="padding: 20px; display: flex; justify-content: center">
+        <button type="button" style="padding: 10px;" onclick="clearCanvas()">Clear</button>
+    </div>
+    <script src="./linear-regression.js"></script>
+    <script>
+        function allocArrOnHeap(arr, type) {
+            let JsArrConv, HeapConv;
+            if (type === "i32") {
+                JsArrConv = (Arr) => new Int32Array(Arr);
+                HeapConv = Module.HEAP32;
+            } else if (type === "i64") {
+                JsArrConv = (Arr) => new BigInt64Array(Arr.map(n => BigInt(n)));
+                HeapConv = Module.HEAP64;
+            } else if (type === "f32") {
+                JsArrConv = (Arr) => new Float32Array(Arr);
+                HeapConv = Module.HEAPF32;
+            } else if (type === "f64") {
+                JsArrConv = (Arr) => new Float64Array(Arr);
+                HeapConv = Module.HEAPF64;
+            } else {
+                throw new Error(`Unrecognized type '${type}'`)
+            }
+
+            let arrJs, arrJsPointer, heapArrLoc;
+            arrJs = JsArrConv(arr);
+            arrJsPointer = Module._malloc(arrJs.length * arrJs.BYTES_PER_ELEMENT);
+            heapArrLoc = arrJsPointer / arrJs.BYTES_PER_ELEMENT;
+            HeapConv.set(arrJs, heapArrLoc);
+            let result = {
+                pointer: arrJsPointer,
+                BYTES_PER_ELEMENT: arrJs.BYTES_PER_ELEMENT,
+                length: arrJs.length,
+                getArr: () => HeapConv.subarray(heapArrLoc, heapArrLoc + arrJs.length)
+            };
+            return result;
+        }
+
+        function getLineSlopeIntercept(X, Y, n) {
+            let xVals = allocArrOnHeap(X, "f64");
+            let yVals = allocArrOnHeap(Y, "f64");
+            let nVal = allocArrOnHeap([n], "i32");
+            let slopeVal = allocArrOnHeap([0], "f64");
+            let interceptVal = allocArrOnHeap([0], "f64");
+            Module._calc_reg_line(
+                xVals.pointer,
+                yVals.pointer,
+                nVal.pointer,
+                interceptVal.pointer,
+                slopeVal.pointer
+            );
+            let intercept = interceptVal.getArr()[0];
+            let slope = slopeVal.getArr()[0];
+            for (let i in [xVals, yVals, nVal, slopeVal, interceptVal]) {
+                Module._free(i.pointer);
+            }
+            return [slope, intercept];
+        }
+    </script>
+    <script>
+        var X = [];
+        var Y = [];
+        var n = 0;
+        const canvas = document.querySelector("#myCanvas");
+        const ctx = canvas.getContext("2d");
+
+        function getMousePosition(canvas, event) {
+            let rect = canvas.getBoundingClientRect();
+            let x = event.clientX - rect.left;
+            let y = event.clientY - rect.top;
+            return [x, y];
+        }
+
+        canvas.addEventListener("mousedown", function (e) {
+            let [x, y] = getMousePosition(canvas, e);
+            X.push(x);
+            Y.push(y);
+            n++;
+            drawCanvas();
+        });
+
+        function getLineYCoord(x, slope, intercept) {
+            return slope * x + intercept;
+        }
+
+        function drawCanvas() {
+            ctx.fillStyle = "lightgrey";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            for (let i = 0; i < n; i++) {
+                ctx.beginPath();
+                ctx.arc(X[i], Y[i], 5, 0, 2 * Math.PI, false);
+                ctx.stroke();
+            }
+
+            if (n <= 1) {
+                return;
+            }
+
+            let [slope, intercept] = getLineSlopeIntercept(X, Y, n);
+
+            ctx.beginPath();
+            ctx.moveTo(0, getLineYCoord(0, slope, intercept));
+            ctx.lineTo(canvas.width, getLineYCoord(canvas.width, slope, intercept));
+            ctx.stroke();
+        }
+
+        function clearCanvas() {
+            X.length = 0;
+            Y.length = 0;
+            n = 0;
+            drawCanvas()
+        }
+
+        drawCanvas();
+    </script>
+</body>
+
+</html>

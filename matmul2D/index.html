@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Fortran On Web: Matrix Multiplication 2D</title>
+</head>
+
+<body>
+    <h2>Matrix Multiplication 2D</h2>
+    <div style="width: 100vw;">
+        <div style="display: flex; justify-content: center">
+            <div style="padding: 5px;">
+                <textarea id="mat1" style="width: 100%; height: 200px;"></textarea>
+                <label for="mat1">A:</label>
+            </div>
+            <div style="padding: 5px;">
+                <textarea id="mat2" style="width: 100%; height: 200px;"></textarea>
+                <label for="mat2">B:</label>
+            </div>
+            <div style="padding: 5px;">
+                <textarea id="mat3" style="width: 100%; height: 200px;"></textarea>
+                <label for="mat3">A @ B:</label>
+            </div>
+        </div>
+        <div style="display: flex; justify-content: center">
+            <button type="button" style="padding: 10px;" onclick="calculate()">Calculate</button>
+        </div>
+    </div>
+    <script src="./matmul2d.js"></script>
+    <script>
+        function transpose(arr) {
+            let rows = arr.length;
+            let cols = arr[0].length;
+            let newarr = [];
+            for (let i = 0; i < cols; i++) {
+                let tmp = []
+                for (let j = 0; j < rows; j++) {
+                    tmp.push(arr[j][i]);
+                }
+                newarr.push(tmp);
+            }
+            return newarr;
+        }
+        function allocArrOnHeap(arr, type) {
+            let JsArrConv, HeapConv;
+            if (type === "i32") {
+                JsArrConv = (Arr) => new Int32Array(Arr);
+                HeapConv = Module.HEAP32;
+            } else if (type === "i64") {
+                JsArrConv = (Arr) => new BigInt64Array(Arr.map(n => BigInt(n)));
+                HeapConv = Module.HEAP64;
+            } else if (type === "f32") {
+                JsArrConv = (Arr) => new Float32Array(Arr);
+                HeapConv = Module.HEAPF32;
+            } else if (type === "f64") {
+                JsArrConv = (Arr) => new Float64Array(Arr);
+                HeapConv = Module.HEAPF64;
+            } else {
+                throw new Error(`Unrecognized type '${type}'`)
+            }
+
+            let arrJs, arrJsPointer, heapArrLoc;
+            arrJs = JsArrConv(arr);
+            arrJsPointer = Module._malloc(arrJs.length * arrJs.BYTES_PER_ELEMENT);
+            heapArrLoc = arrJsPointer / arrJs.BYTES_PER_ELEMENT;
+            HeapConv.set(arrJs, heapArrLoc);
+            let result = {
+                pointer: arrJsPointer,
+                BYTES_PER_ELEMENT: arrJs.BYTES_PER_ELEMENT,
+                length: arrJs.length,
+                getArr: () => HeapConv.subarray(heapArrLoc, heapArrLoc + arrJs.length)
+            };
+            return result;
+        }
+
+        function parseText2Matrix(text) {
+            text = text.trim();
+            let lines = text.split("\n");
+            lines = lines.map(s => s.trim())
+            let [rows, cols] = lines[0].split(" ").map(n => parseInt(n));
+            let matrix = []
+            for (let i = 1; i <= rows; i++) {
+                matrix.push(lines[i].trim().split(" ").map(n => parseFloat(n)));
+            }
+            matrix = transpose(matrix).flat();
+            return { matrix, rows, cols };
+        }
+
+        function parseMatrix2Text(mat, r, c) {
+            let text = `${r} ${c}\n`;
+            for (let i = 0; i < r; i++) {
+                for (let j = 0; j < c; j++) {
+                    text += `${mat[i * c + j]} `;
+                }
+                text += "\n";
+            }
+            return text;
+        }
+
+        function convTo2DArr(arr, r, c) {
+            let newarr = []
+            for (let i = 0; i < r; i++) {
+                let tmp = [];
+                for (let j = 0; j < c; j++) {
+                    tmp.push(arr[i * c + j]);
+                }
+                newarr.push(tmp);
+            }
+            return newarr;
+        }
+
+        function freeAll(a) {
+            for (i in a) {
+                Module._free(i.pointer);
+            }
+        }
+
+        function calculate() {
+            let mat1 = document.querySelector("#mat1").value;
+            let mat2 = document.querySelector("#mat2").value;
+            let mat3 = [];
+            let m1 = parseText2Matrix(mat1);
+            let m2 = parseText2Matrix(mat2);
+            for (let i = 0; i < m1.rows * m2.cols; i++) {
+                mat3.push(0);
+            }
+            let mat1Val = allocArrOnHeap(m1.matrix, "f64");
+            let mat1RowsVal = allocArrOnHeap([m1.rows], "i32");
+            let mat1ColsVal = allocArrOnHeap([m1.cols], "i32");
+            let mat2Val = allocArrOnHeap(m2.matrix, "f64");
+            let mat2RowsVal = allocArrOnHeap([m2.rows], "i32");
+            let mat2ColsVal = allocArrOnHeap([m2.cols], "i32");
+            let mat3Val = allocArrOnHeap(mat3, "f64");
+            Module._matmul2d(
+                mat1Val.pointer,
+                mat1RowsVal.pointer,
+                mat1ColsVal.pointer,
+                mat2Val.pointer,
+                mat2RowsVal.pointer,
+                mat2ColsVal.pointer,
+                mat3Val.pointer
+            );
+            let result = mat3Val.getArr();
+            result = convTo2DArr(result, m2.cols, m1.rows);
+            result = transpose(result).flat();
+            document.querySelector("#mat3").value = parseMatrix2Text(result, m1.rows, m2.cols);
+            freeAll([mat1Val, mat1RowsVal, mat1ColsVal, mat2Val, mat2RowsVal, mat2ColsVal, mat3Val]);
+        }
+
+        function main() {
+            document.querySelector("#mat1").value = parseMatrix2Text([1, 2, 3, 4, 5, 6], 2, 3);
+            document.querySelector("#mat2").value = parseMatrix2Text([7, 8, 9], 3, 1);
+        }
+
+        main();
+    </script>
+</body>
+
+</html>
