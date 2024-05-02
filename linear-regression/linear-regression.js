@@ -1251,7 +1251,7 @@ var wasmImports = {
 };
 var wasmExports = createWasm();
 var ___wasm_call_ctors = createExportWrapper('__wasm_call_ctors');
-var _calc_reg_line = Module['_calc_reg_line'] = createExportWrapper('calc_reg_line');
+var _calculate_regression_line = Module['_calculate_regression_line'] = createExportWrapper('calculate_regression_line');
 var _fflush = Module['_fflush'] = createExportWrapper('fflush');
 var _malloc = Module['_malloc'] = createExportWrapper('malloc');
 var _free = Module['_free'] = createExportWrapper('free');
