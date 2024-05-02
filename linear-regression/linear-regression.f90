@@ -1,36 +1,34 @@
-!taken from https://gist.github.com/komasaru/f1e76fc44cd650298e2e9485620533ed
-
 !lfortran linear-regression/linear-regression.f90 -c --generate-object-code --skip-pass unused_functions --target=wasm32-unknown-emscripten
 
-!em++ linear-regression.o /Users/ubaid/Desktop/OpenSource/lfortran/src/bin/../runtime/lfortran_runtime_wasm_emcc.o -o linear-regression/linear-regression.js -sEXPORTED_FUNCTIONS='_malloc','_free','_calc_reg_line' -sWASM_BIGINT -sSTACK_SIZE=50mb -sINITIAL_MEMORY=256mb
-subroutine calc_reg_line(x, y, n, a, b)
+!em++ linear-regression.o /Users/ubaid/Desktop/OpenSource/lfortran/src/bin/../runtime/lfortran_runtime_wasm_emcc.o -o linear-regression/linear-regression.js -sEXPORTED_FUNCTIONS='_malloc','_free','_calculate_regression_line' -sWASM_BIGINT -sSTACK_SIZE=50mb -sINITIAL_MEMORY=256mb
+subroutine calculate_regression_line(x_values, y_values, num_values, slope, intercept)
     implicit none
-    integer, parameter :: DP = selected_real_kind(9, 99)
-    integer, intent(in) :: n
-    real(DP), intent(in)  :: x(n), y(n)
-    real(DP), intent(out) :: a, b
-    integer :: size_x, size_y
-    real(DP)    :: sum_x, sum_y, sum_xx, sum_xy
+    integer, parameter :: dp = selected_real_kind(9, 99)
+    integer, intent(in) :: num_values
+    real(dp), intent(in)  :: x_values(num_values), y_values(num_values)
+    real(dp), intent(out) :: slope, intercept
+    integer :: x_size, y_size
+    real(dp) :: sum_x, sum_y, sum_x_squared, sum_xy
 
-    size_x = size(x)
-    size_y = size(y)
+    x_size = size(x_values)
+    y_size = size(y_values)
 
-    if (size_x == 0 .or. size_y == 0) then
-      print *, "[ERROR] array size == 0"
+    if (x_size == 0 .or. y_size == 0) then
+      print *, "Error: Array size is 0."
       stop
     end if
-    if (size_x /= size_y) then
-      print *, "[ERROR] size(X) != size(Y)"
+    if (x_size /= y_size) then
+      print *, "Error: Sizes of X and Y arrays are different."
       stop
     end if
 
-    sum_x  = sum(x)
-    sum_y  = sum(y)
-    sum_xx = sum(x * x)
-    sum_xy = sum(x * y)
-    a = (sum_xx * sum_y - sum_xy * sum_x) &
-    & / (size_x * sum_xx - sum_x * sum_x)
-    b = (size_x * sum_xy - sum_x * sum_y) &
-    & / (size_x * sum_xx - sum_x * sum_x)
+    sum_x = sum(x_values)
+    sum_y = sum(y_values)
+    sum_x_squared = sum(x_values * x_values)
+    sum_xy = sum(x_values * y_values)
 
-end subroutine calc_reg_line
+    slope = (x_size * sum_xy - sum_x * sum_y) &
+        & / (x_size * sum_x_squared - sum_x * sum_x)
+    intercept = (sum_x_squared * sum_y - sum_xy * sum_x) &
+        & / (x_size * sum_x_squared - sum_x * sum_x)
+end subroutine calculate_regression_line

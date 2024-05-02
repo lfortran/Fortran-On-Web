@@ -56,12 +56,12 @@
             let nVal = allocArrOnHeap([n], "i32");
             let slopeVal = allocArrOnHeap([0], "f64");
             let interceptVal = allocArrOnHeap([0], "f64");
-            Module._calc_reg_line(
+            Module._calculate_regression_line(
                 xVals.pointer,
                 yVals.pointer,
                 nVal.pointer,
+                slopeVal.pointer,
                 interceptVal.pointer,
-                slopeVal.pointer
             );
             let intercept = interceptVal.getArr()[0];
             let slope = slopeVal.getArr()[0];
