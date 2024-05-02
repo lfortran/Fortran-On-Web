@@ -8,8 +8,8 @@ We have used the [LFortran](https://github.com/lfortran/lfortran) compiler ([26c
 
 ## Examples
 
-- [MNIST Classification](https://shaikh-ubaid.github.io/mnist-classifier-blas-wasm/), [source](https://github.com/Shaikh-Ubaid/mnist-classifier-blas-wasm)
+- [MNIST Classification](https://lfortran.github.io/mnist-classifier-blas-wasm/), [source](https://github.com/lfortran/mnist-classifier-blas-wasm)
 
-- [Matrix Multiplication 2D](https://shaikh-ubaid.github.io/Fortran-On-Web/matmul2D/), [source](https://github.com/Shaikh-Ubaid/Fortran-On-Web)
+- [Matrix Multiplication 2D](https://lfortran.github.io/Fortran-On-Web/matmul2D/), [source](https://github.com/lfortran/Fortran-On-Web)
 
-- [Simple Linear Regression](https://shaikh-ubaid.github.io/Fortran-On-Web/linear-regression/), [source](https://github.com/Shaikh-Ubaid/Fortran-On-Web)
+- [Simple Linear Regression](https://lfortran.github.io/Fortran-On-Web/linear-regression/), [source](https://github.com/lfortran/Fortran-On-Web)
